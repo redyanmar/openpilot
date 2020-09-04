@@ -171,6 +171,7 @@ class CarController():
         self.smartspeed_old = self.smartspeed
       else:
         self.smartspeed_old = 0
+        self.smartspeedupdate = op_params.get('smart_speed')
 
       if enabled and CS.rawcruiseStateenabled and self.smartspeedupdate:
         if (self.setspeed > (self.smartspeed * 1.005)) and (CS.cruise_buttons != 4):
