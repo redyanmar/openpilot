@@ -77,13 +77,10 @@ class CarController():
                                    left_lane, right_lane,
                                    left_lane_warning, right_lane_warning, self.lfa_available))
 
-    if pcm_cancel_cmd:
+    if pcm_cancel_cmd and 1==0:
       can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.CANCEL))
-    elif CS.out.cruiseState.standstill:
-      # send resume at a max freq of 5Hz
-      if (frame - self.last_resume_frame)*DT_CTRL > 0.2:
-        can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.RES_ACCEL))
-        self.last_resume_frame = frame
+    elif CS.out.cruiseState.standstill and CS.vrelative > 0:
+      can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.RES_ACCEL))
 
     # 20 Hz LFA MFA message
     if frame % 5 == 0 and self.lfa_available:

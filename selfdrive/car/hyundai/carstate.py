@@ -132,6 +132,7 @@ class CarState(CarStateBase):
     self.park_brake = cp.vl["CGW1"]['CF_Gway_ParkBrakeSw']
     self.steer_state = cp.vl["MDPS12"]['CF_Mdps_ToiActive']  # 0 NOT ACTIVE, 1 ACTIVE
     self.lead_distance = cp.vl["SCC11"]['ACC_ObjDist']
+    self.vrelative = cp.vl["SCC11"]['ACC_ObjRelSpd']
 
     return ret
 
@@ -194,6 +195,7 @@ class CarState(CarStateBase):
 
       ("MainMode_ACC", "SCC11", 0),
       ("VSetDis", "SCC11", 0),
+      ("ACC_ObjRelSpd", "SCC11", 0),
       ("SCCInfoDisplay", "SCC11", 0),
       ("ACC_ObjDist", "SCC11", 0),
       ("ACCMode", "SCC12", 1),
