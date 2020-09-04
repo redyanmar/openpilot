@@ -1,9 +1,7 @@
 from numpy import interp
 
 from cereal import car, messaging
-from common import op_params
 from common.op_params import opParams
-from common.realtime import DT_CTRL
 from selfdrive.car import apply_std_steer_torque_limits
 from selfdrive.car.hyundai.hyundaican import create_lkas11, create_clu11, create_lfa_mfa
 from selfdrive.car.hyundai.values import Buttons, SteerLimitParams, CAR, FEATURES
@@ -120,7 +118,7 @@ class CarController():
     if not travis:
       self.sm.update(0)
       op_params = opParams()
-      if self.sm['liveMapData'].speedLimitValid and enabled and op_params.get('smart_speed'):
+      if self.sm['liveMapData'].speedLimitValid and enabled and CS.rawcruiseStateenabled and op_params.get('smart_speed'):
         if CS.is_set_speed_in_mph:
           self.smartspeed = self.sm['liveMapData'].speedLimit * CV.MS_TO_MPH
           self.fixed_offset = interp(self.smartspeed, splmoffsetmphBp, splmoffsetmphV)
@@ -141,11 +139,11 @@ class CarController():
         self.smartspeed_old = self.smartspeed
       else:
         self.smartspeed_old = 0
-        self.smartspeedupdate = op_params.get('smart_speed')
+        self.smartspeedupdate = False
 
       framestoskip = 10
 
-      if (frame - self.last_button_frame) > framestoskip and enabled and CS.rawcruiseStateenabled and self.smartspeedupdate:
+      if (frame - self.last_button_frame) > framestoskip and self.smartspeedupdate:
         if (self.setspeed > (self.smartspeed * 1.005)) and (CS.cruise_buttons != 4):
           can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.SET_DECEL, self.clu11_cnt))
           if CS.cruise_buttons == 1:
