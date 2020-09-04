@@ -127,14 +127,12 @@ class CarController():
           self.smartspeed = self.smartspeed + int(self.fixed_offset)
           self.smartspeed = max(self.smartspeed, 20)
           self.setspeed = CS.cruisesetspeed * CV.MS_TO_MPH
-          self.currentspeed = int(CS.out.vEgo * CV.MS_TO_MPH)
         else:
           self.smartspeed = self.sm['liveMapData'].speedLimit * CV.MS_TO_KPH
           self.fixed_offset = interp(self.smartspeed, splmoffsetkphBp, splmoffsetkphV)
           self.smartspeed = self.smartspeed + int(self.fixed_offset)
           self.smartspeed = max(self.smartspeed, 30)
           self.setspeed = CS.cruisesetspeed * CV.MS_TO_KPH
-          self.currentspeed = int(CS.out.vEgo * CV.MS_TO_KPH)
 
         if self.smartspeed_old != self.smartspeed:
           self.smartspeedupdate = True
@@ -145,9 +143,6 @@ class CarController():
         self.smartspeed_old = 0
         self.smartspeedupdate = op_params.get('smart_speed')
 
-      #if op_params.get('default_brake_distance') < 50:
-      #  framestoskip = int(clip(op_params.get('default_brake_distance'), 5, 50))
-      #else:
       framestoskip = 10
 
       if (frame - self.last_button_frame) > framestoskip and enabled and CS.rawcruiseStateenabled and self.smartspeedupdate:
