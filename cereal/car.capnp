@@ -115,7 +115,6 @@ struct CarEvent @0x9b1657f34caf3ad3 {
     preKeepHandsOnWheel @90;
     promptKeepHandsOnWheel @91;
     keepHandsOnWheel @92;
-    deviceFalling @93;
   }
 }
 
@@ -409,8 +408,6 @@ struct CarParams {
   communityFeature @46: Bool;  # true if a community maintained feature is detected
   fingerprintSource @49: FingerprintSource;
   networkLocation @50 :NetworkLocation;  # Where Panda/C2 is integrated into the car's CAN network
-  autoLcaEnabled @51: Bool;
-
 
   struct LateralParams {
     torqueBP @0 :List(Int32);
