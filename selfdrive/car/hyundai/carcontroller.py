@@ -54,6 +54,9 @@ class CarController():
     self.car_fingerprint = CP.carFingerprint
     self.packer = CANPacker(dbc_name)
     self.steer_rate_limited = False
+    self.last_button_frame = 0
+    self.button_cnt = 0
+
     self.sm = 0
     self.smartspeed = 0
     self.setspeed = 0
@@ -72,7 +75,7 @@ class CarController():
 
     self.lfa_available = True if self.car_fingerprint in FEATURES["send_lfa_mfa"] else False
 
-    self.high_steering_allowed = True if self.car_fingerprint in FEATURES["allow_high_steering"] else False
+    self.high_steer_allowed = True if self.car_fingerprint in FEATURES["allow_high_steer"] else False
 
     # Steering Torque
     new_steer = actuators.steer * SteerLimitParams.STEER_MAX
@@ -80,7 +83,7 @@ class CarController():
     self.steer_rate_limited = new_steer != apply_steer
 
     # disable if steer angle reach 90 deg, otherwise mdps fault in some models
-    lkas_active = enabled and ((abs(CS.out.steeringAngle) < 90.) or self.high_steering_allowed)
+    lkas_active = enabled and ((abs(CS.out.steeringAngle) < 90.) or self.high_steer_allowed)
 
     # fix for Genesis hard fault at low speed
     if CS.out.vEgo < 16.7 and self.car_fingerprint == CAR.HYUNDAI_GENESIS:
@@ -96,18 +99,17 @@ class CarController():
                         left_lane, right_lane, left_lane_depart, right_lane_depart)
 
     can_sends = []
+    self.clu11_cnt = frame % 0x10
+
     can_sends.append(create_lkas11(self.packer, frame, self.car_fingerprint, apply_steer, lkas_active,
                                    CS.lkas11, sys_warning, sys_state, enabled,
                                    left_lane, right_lane,
                                    left_lane_warning, right_lane_warning, self.lfa_available))
 
     if pcm_cancel_cmd and 1==0:
-      can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.CANCEL))
+      can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.CANCEL, self.clu11_cnt))
     elif CS.out.cruiseState.standstill and 1==0:
-      # send resume at a max freq of 5Hz
-      if (frame - self.last_resume_frame)*DT_CTRL > 0.2:
-        can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.RES_ACCEL))
-        self.last_resume_frame = frame
+      can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.RES_ACCEL, self.clu11_cnt))
 
     # 20 Hz LFA MFA message
     if frame % 5 == 0 and self.lfa_available:
@@ -125,31 +127,33 @@ class CarController():
           self.smartspeed = self.smartspeed + int(self.fixed_offset)
           self.smartspeed = max(self.smartspeed, 20)
           self.setspeed = CS.cruisesetspeed * CV.MS_TO_MPH
-          self.currentspeed = int(CS.out.vEgo * CV.MS_TO_MPH)
         else:
           self.smartspeed = self.sm['liveMapData'].speedLimit * CV.MS_TO_KPH
           self.fixed_offset = interp(self.smartspeed, splmoffsetkphBp, splmoffsetkphV)
           self.smartspeed = self.smartspeed + int(self.fixed_offset)
           self.smartspeed = max(self.smartspeed, 30)
           self.setspeed = CS.cruisesetspeed * CV.MS_TO_KPH
-          self.currentspeed = int(CS.out.vEgo * CV.MS_TO_KPH)
 
         if self.smartspeed_old != self.smartspeed:
           self.smartspeedupdate = True
+          self.button_cnt = 0
 
         self.smartspeed_old = self.smartspeed
       else:
         self.smartspeed_old = 0
+        self.smartspeedupdate = op_params.get('smart_speed')
 
-      if frame % 5 == 0 and enabled and CS.rawcruiseStateenabled and self.smartspeedupdate:
+      framestoskip = 10
+
+      if (frame - self.last_button_frame) > framestoskip and enabled and CS.rawcruiseStateenabled and self.smartspeedupdate:
         if (self.setspeed > (self.smartspeed * 1.005)) and (CS.cruise_buttons != 4):
-          can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.SET_DECEL))
+          can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.SET_DECEL, self.clu11_cnt))
           if CS.cruise_buttons == 1:
              self.button_res_stop += 2
           else:
              self.button_res_stop -= 1
         elif (self.setspeed < (self.smartspeed / 1.005)) and (CS.cruise_buttons != 4):
-          can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.RES_ACCEL))
+          can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.RES_ACCEL, self.clu11_cnt))
           if CS.cruise_buttons == 2:
              self.button_set_stop += 2
           else:
@@ -157,8 +161,13 @@ class CarController():
         else:
           self.button_res_stop = self.button_set_stop = 0
 
-        if (abs(self.smartspeed - self.setspeed) < 1) or (self.button_res_stop >= 50) or (self.button_set_stop >= 50):
+        if (abs(self.smartspeed - self.setspeed) < 0.5) or (self.button_res_stop >= 50) or (self.button_set_stop >= 50):
           self.smartspeedupdate = False
+
+        self.button_cnt += 1
+        if self.button_cnt > 5:
+          self.last_button_frame = frame
+          self.button_cnt = 0
       else:
         self.button_set_stop = self.button_res_stop = 0
 
