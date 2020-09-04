@@ -1,4 +1,4 @@
-from numpy import interp
+from numpy import interp, clip
 
 from cereal import car, messaging
 from common import op_params
@@ -145,7 +145,12 @@ class CarController():
         self.smartspeed_old = 0
         self.smartspeedupdate = op_params.get('smart_speed')
 
-      if (frame - self.last_button_frame) > 10 and enabled and CS.rawcruiseStateenabled and self.smartspeedupdate:
+      #if op_params.get('default_brake_distance') < 50:
+      #  framestoskip = int(clip(op_params.get('default_brake_distance'), 5, 50))
+      #else:
+      framestoskip = 10
+
+      if (frame - self.last_button_frame) > framestoskip and enabled and CS.rawcruiseStateenabled and self.smartspeedupdate:
         if (self.setspeed > (self.smartspeed * 1.005)) and (CS.cruise_buttons != 4):
           can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.SET_DECEL, self.button_cnt))
           if CS.cruise_buttons == 1:
@@ -161,11 +166,11 @@ class CarController():
         else:
           self.button_res_stop = self.button_set_stop = 0
 
-        if (abs(self.smartspeed - self.setspeed) < 1) or (self.button_res_stop >= 50) or (self.button_set_stop >= 50):
+        if (abs(self.smartspeed - self.setspeed) < 0.5) or (self.button_res_stop >= 50) or (self.button_set_stop >= 50):
           self.smartspeedupdate = False
 
         self.button_cnt += 1
-        if self.button_cnt > 10:
+        if self.button_cnt > 5:
           self.last_button_frame = frame
           self.button_cnt = 0
       else:
