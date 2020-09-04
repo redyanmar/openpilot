@@ -123,7 +123,7 @@ class CarController():
     if CS.mdps_bus: # send lkas11 bus 1 if mdps
       clu11_speed = self.currentspeed = CS.clu11["CF_Clu_Vanz"]
       enabled_speed = 38 if CS.is_set_speed_in_mph else 60
-      if clu11_speed > enabled_speed or not lkas_active or CS.out.gearShifter == GearShifter.reverse:
+      if clu11_speed > enabled_speed or not lkas_active or CS.out.gearShifter != GearShifter.drive:
         enabled_speed = clu11_speed
       else:
         if CS.is_set_speed_in_mph:
@@ -152,7 +152,7 @@ class CarController():
     if not travis:
       self.sm.update(0)
       op_params = opParams()
-      if self.sm['liveMapData'].speedLimitValid and enabled and op_params.get('smart_speed'):
+      if self.sm['liveMapData'].speedLimitValid and enabled and CS.rawcruiseStateenabled and op_params.get('smart_speed'):
         if CS.is_set_speed_in_mph:
           self.smartspeed = self.sm['liveMapData'].speedLimit * CV.MS_TO_MPH
           self.fixed_offset = interp(self.smartspeed, splmoffsetmphBp, splmoffsetmphV)
@@ -173,11 +173,11 @@ class CarController():
         self.smartspeed_old = self.smartspeed
       else:
         self.smartspeed_old = 0
-        self.smartspeedupdate = op_params.get('smart_speed')
+        self.smartspeedupdate = False
 
       framestoskip = 10
 
-      if (frame - self.last_button_frame) > framestoskip and enabled and CS.rawcruiseStateenabled and self.smartspeedupdate:
+      if (frame - self.last_button_frame) > framestoskip and self.smartspeedupdate:
         if (self.setspeed > (self.smartspeed * 1.005)) and (CS.cruise_buttons != 4):
           can_sends.append(create_clu11(self.packer, frame, 0, CS.clu11, Buttons.SET_DECEL, self.currentspeed, self.button_cnt))
           if CS.cruise_buttons == 1:
