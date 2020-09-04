@@ -46,10 +46,9 @@ class CarController():
   def update(self, enabled, CS, frame, actuators, pcm_cancel_cmd, visual_alert,
              left_lane, right_lane, left_lane_depart, right_lane_depart):
 
-    if self.car_fingerprint in FEATURES["send_lfa_mfa"]:
-      self.lfa_available = True
-    else:
-      self.lfa_available = False
+    self.lfa_available = True if self.car_fingerprint in FEATURES["send_lfa_mfa"] else False
+
+    self.high_steer_allowed = True if self.car_fingerprint in FEATURES["allow_high_steer"] else False
 
     # Steering Torque
     new_steer = actuators.steer * SteerLimitParams.STEER_MAX
@@ -57,7 +56,7 @@ class CarController():
     self.steer_rate_limited = new_steer != apply_steer
 
     # disable if steer angle reach 90 deg, otherwise mdps fault in some models
-    lkas_active = enabled and abs(CS.out.steeringAngle) < 90.
+    lkas_active = enabled and ((abs(CS.out.steeringAngle) < 90.) or self.high_steer_allowed)
 
     # fix for Genesis hard fault at low speed
     if CS.out.vEgo < 16.7 and self.car_fingerprint == CAR.HYUNDAI_GENESIS:
