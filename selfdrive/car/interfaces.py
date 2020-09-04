@@ -112,21 +112,21 @@ class CarInterfaceBase():
     if cs_out.seatbeltUnlatched and disengage_event:
       events.add(EventName.seatbeltNotLatched)
     if cs_out.gearShifter != GearShifter.drive and cs_out.gearShifter not in extra_gears:
-      if cs_out.vEgo < 5:
-        eventsArne182.add(EventNameArne182.wrongGearArne)
-      else:
+#      if cs_out.vEgo < 5:
+#        eventsArne182.add(EventNameArne182.wrongGearArne)
+#      else:
         events.add(EventName.wrongGear)
     if cs_out.gearShifter == GearShifter.reverse:
-      if cs_out.vEgo < 5:
-        eventsArne182.add(EventNameArne182.reverseGearArne)
-      else:
+#      if cs_out.vEgo < 5:
+#        eventsArne182.add(EventNameArne182.reverseGearArne)
+#      else:
         events.add(EventName.reverseGear)
     if not cs_out.cruiseState.available:
       events.add(EventName.wrongCarMode)
     if cs_out.espDisabled:
       events.add(EventName.espDisabled)
-    if cs_out.gasPressed and disengage_event:
-      events.add(EventName.gasPressed)
+    #if cs_out.gasPressed and disengage_event:
+    #  events.add(EventName.gasPressed)
     if cs_out.stockFcw:
       events.add(EventName.stockFcw)
     if cs_out.stockAeb:
@@ -144,8 +144,8 @@ class CarInterfaceBase():
     # Disable on rising edge of gas or brake. Also disable on brake when speed > 0.
     # Optionally allow to press gas at zero speed to resume.
     # e.g. Chrysler does not spam the resume button yet, so resuming with gas is handy. FIXME!
-    if disengage_event and ((cs_out.gasPressed and (not self.CS.out.gasPressed) and cs_out.vEgo > gas_resume_speed) or \
-       (cs_out.brakePressed and (not self.CS.out.brakePressed or not cs_out.standstill))):
+    # if disengage_event and ((cs_out.gasPressed and (not self.CS.out.gasPressed) and cs_out.vEgo > gas_resume_speed) or \
+    if (cs_out.brakePressed and (not self.CS.out.brakePressed or not cs_out.standstill)):
       events.add(EventName.pedalPressed)
 
     # we engage when pcm is active (rising edge)
