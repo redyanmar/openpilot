@@ -129,7 +129,7 @@ class CarController():
           self.smartspeed = self.sm['liveMapData'].speedLimit * CV.MS_TO_KPH
           self.fixed_offset = interp(self.smartspeed, splmoffsetkphBp, splmoffsetkphV)
           self.smartspeed = self.smartspeed + int(self.fixed_offset)
-          self.smartspeed = max(self.smartspeed, 30)
+          self.smartspeed = max(self.smartspeed, 40)
           self.setspeed = CS.cruisesetspeed * CV.MS_TO_KPH
 
         if self.smartspeed_old != self.smartspeed:
@@ -142,6 +142,12 @@ class CarController():
         self.smartspeedupdate = False
 
       framestoskip = 10
+
+      print("smart speed", self.smartspeed)
+      print("update now", self.smartspeedupdate)
+      print("smart speed valid", self.sm['liveMapData'].speedLimitValid)
+      print("cruise set speed", self.setspeed)
+
 
       if (frame - self.last_button_frame) > framestoskip and self.smartspeedupdate:
         if (self.setspeed > (self.smartspeed * 1.005)) and (CS.cruise_buttons != 4):
