@@ -535,7 +535,7 @@ EVENTS = {
       "TAKE CONTROL",
       "Attempting Refocus: Camera Focus Invalid",
       AlertStatus.userPrompt, AlertSize.mid,
-      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.chimeWarning1, .4, 2., 3.),
+      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.chimeWarning1, .4, 2., 3., creation_delay=3.1),
   },
 
   EventName.outOfSpace: {
@@ -593,7 +593,12 @@ EVENTS = {
   },
 
   EventName.calibrationInvalid: {
-    ET.SOFT_DISABLE: SoftDisableAlert("Calibration Invalid: Reposition Device and Recalibrate"),
+    ET.PERMANENT: Alert(
+      "Calibration Invalid",
+      "Reposition Device and Recalibrate",
+      AlertStatus.normal, AlertSize.mid,
+      Priority.LOWER, VisualAlert.none, AudibleAlert.none, 0., 0., .2),
+    ET.SOFT_DISABLE: SoftDisableAlert("Calibration Invalid: Reposition Device & Recalibrate"),
     ET.NO_ENTRY: NoEntryAlert("Calibration Invalid: Reposition Device & Recalibrate"),
   },
 
