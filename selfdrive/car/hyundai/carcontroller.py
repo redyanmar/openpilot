@@ -1,4 +1,4 @@
-from numpy import interp
+from numpy import interp, math
 
 from cereal import car, messaging
 from common.op_params import opParams
@@ -56,6 +56,7 @@ class CarController():
     self.manual_steering_timer = 0
     self.last_button_frame = 0
     self.button_cnt = 0
+    self.vdiff = 0
 
     self.sm = 0
     self.smartspeed = 0
@@ -65,6 +66,9 @@ class CarController():
     self.smartspeedupdate = False
     self.fixed_offset = 0
     self.button_res_stop = self.button_set_stop = 0
+
+    self.curvature_factor = 1.
+
     if not travis:
       self.sm = messaging.SubMaster(['liveMapData'])
 
@@ -139,9 +143,14 @@ class CarController():
       can_sends.append(create_clu11(self.packer, frame, 1, CS.clu11, Buttons.NONE, enabled_speed, self.clu11_cnt))
 
     if pcm_cancel_cmd:
-      can_sends.append(create_clu11(self.packer, frame, 0, CS.clu11, Buttons.CANCEL, self.currentspeed, self.clu11_cnt))
+      self.vdiff = 0.
+     # can_sends.append(create_clu11(self.packer, frame, 0, CS.clu11, Buttons.CANCEL, self.currentspeed, self.clu11_cnt))
     elif CS.out.cruiseState.standstill and CS.vrelative > 0:
-      can_sends.append(create_clu11(self.packer, frame, 0, CS.clu11, Buttons.RES_ACCEL, self.currentspeed, self.clu11_cnt))
+      self.vdiff += (CS.vrelative - self.vdiff)
+      if self.vdiff > 1. or CS.lead_distance > 8.:
+        can_sends.append(create_clu11(self.packer, frame, 0, CS.clu11, Buttons.RES_ACCEL, self.currentspeed, self.clu11_cnt))
+    else:
+      self.vdiff = 0.
 
     # 20 Hz LFA MFA message
     if frame % 5 == 0 and self.lfa_available:
@@ -152,19 +161,32 @@ class CarController():
     if not travis:
       self.sm.update(0)
       op_params = opParams()
-      if self.sm['liveMapData'].speedLimitValid and enabled and CS.rawcruiseStateenabled and op_params.get('smart_speed'):
-        if CS.is_set_speed_in_mph:
-          self.smartspeed = self.sm['liveMapData'].speedLimit * CV.MS_TO_MPH
-          self.fixed_offset = interp(self.smartspeed, splmoffsetmphBp, splmoffsetmphV)
-          self.smartspeed = self.smartspeed + int(self.fixed_offset)
-          self.smartspeed = max(self.smartspeed, 20)
-          self.setspeed = CS.cruisesetspeed * CV.MS_TO_MPH
+
+      speed_unit = CV.MS_TO_MPH if CS.is_set_speed_in_mph else CV.MS_TO_KPH
+
+      if self.sm['liveMapData'].distToTurn < 350:
+        self.curvature_factor = op_params.get('curvature_factor')
+
+        curvature = abs(self.sm['liveMapData'].curvature)
+        radius = 1 / max(1e-4, curvature) * self.curvature_factor
+        if radius > 500:
+          c = 0.9  # 0.9 at 1000m = 108 kph
+        elif radius > 250:
+          c = 3.5 - 13 / 2500 * radius  # 2.2 at 250m 84 kph
         else:
-          self.smartspeed = self.sm['liveMapData'].speedLimit * CV.MS_TO_KPH
-          self.fixed_offset = interp(self.smartspeed, splmoffsetkphBp, splmoffsetkphV)
-          self.smartspeed = self.smartspeed + int(self.fixed_offset)
-          self.smartspeed = max(self.smartspeed, 30)
-          self.setspeed = CS.cruisesetspeed * CV.MS_TO_KPH
+          c = 3.0 - 2 / 625 * radius  # 3.0 at 15m 24 kph
+        v_curvature_map = math.sqrt(c * radius) * speed_unit
+      else:
+        v_curvature_map = 250
+
+      if self.sm['liveMapData'].speedLimitValid and enabled and CS.rawcruiseStateenabled and op_params.get('smart_speed'):
+        self.smartspeed = self.sm['liveMapData'].speedLimit * speed_unit
+        self.fixed_offset = interp(self.smartspeed, splmoffsetmphBp, splmoffsetmphV) if CS.is_set_speed_in_mph else \
+                            interp(self.smartspeed, splmoffsetkphBp, splmoffsetkphV)
+        self.smartspeed = max(self.smartspeed + int(self.fixed_offset), 20) if CS.is_set_speed_in_mph else \
+                          max(self.smartspeed + int(self.fixed_offset), 30)
+        self.smartspeed = min(self.smartspeed, max(self.smartspeed - 1.5 * self.fixed_offset, v_curvature_map))
+        self.setspeed = CS.cruisesetspeed * speed_unit
 
         if self.smartspeed_old != self.smartspeed:
           self.smartspeedupdate = True
