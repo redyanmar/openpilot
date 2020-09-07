@@ -92,7 +92,7 @@ class CarController():
     if pcm_cancel_cmd:
       self.vdiff = 0.
       can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.CANCEL, self.clu11_cnt))
-    elif CS.out.cruiseState.standstill and not self.longcontrol and CS.vrelative > 0:
+    elif CS.out.cruiseState.standstill and CS.vrelative > 0:
       self.vdiff += (CS.vrelative - self.vdiff)
       if self.vdiff > 1. or CS.lead_distance > 8.:
         can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.RES_ACCEL, self.clu11_cnt))

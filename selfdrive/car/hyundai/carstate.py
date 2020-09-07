@@ -129,12 +129,13 @@ class CarState(CarStateBase):
 
     self.radar_obj_valid = cp.vl["SCC11"]['ACC_ObjStatus']
     self.vrelative = cp.vl["SCC11"]['ACC_ObjRelSpd']
-    # save the entire LKAS11 and CLU11
-    self.lkas11 = copy.copy(cp_cam.vl["LKAS11"])
-    self.clu11 = copy.copy(cp.vl["CLU11"])
     self.park_brake = cp.vl["CGW1"]['CF_Gway_ParkBrakeSw']
     self.steer_state = cp.vl["MDPS12"]['CF_Mdps_ToiActive']  # 0 NOT ACTIVE, 1 ACTIVE
     self.lead_distance = cp.vl["SCC11"]['ACC_ObjDist']
+
+    # save the entire LKAS11 and CLU11
+    self.lkas11 = copy.copy(cp_cam.vl["LKAS11"])
+    self.clu11 = copy.copy(cp.vl["CLU11"])
 
     return ret
 
